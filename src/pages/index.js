@@ -21,8 +21,7 @@ const IndexPage = ({ data }) => {
 		<Layout>
 			<SEO title="Home" />
 			<WaveSection>
-				<h1 className="intro-title">Hello! Welcome to NestedAi</h1>
-				<h3 className="intro-title">NestedAi is a Research based StartUp. Our goal is to build and connect Artifitial Intelligence to Everyone</h3>
+				<h1 className="intro-title">Welcome to NestedAi</h1>
 				<p>
 					 AI Tested. AI Nested.
 				</p>
