@@ -1,0 +1,322 @@
+---
+path: '/blog/build-fullstack-apps-wih -react-django'
+date: '2020-03-15'
+title: 'Serving fullstack apps with React and Django'
+subtitle: 'Django is one of the most complete web development frameworks available.With the power of Python, we can get an application up and running in just about no time..'
+tags: ['home']
+featuredImage: './redjango.jpg'
+published:
+    [
+        [
+            'Devto',
+            'https://www.freecodecamp.org/news/how-we-harnessed-the-power-of-reactive-programming-with-refract-87f269ac779e/',
+        ],
+        [
+            'Medium',
+            'https://medium.com/fanduel-life/how-we-harnessed-the-power-of-reactive-programming-with-refract-a9e6568281e1',
+        ],
+    ]
+link: 'https://macrina.netlify.app/'
+repo: 'https://github.com/jeffubayi/Macrina'
+---
+With the advent of Single-page applications (SPAs), it’s become increasingly common to create applications that use Django only to provide an API that 
+responds to JSON data consumed by applications developed in the most varied JavaScript frameworks.
+
+
+In this tutorial, we’ll put together a React app on the front end and a Django app that functions as an API for the back end.
+
+![](https://miro.medium.com/max/804/1*lU33rCWoiW31simf-nWUVQ.png)
+
+You can expose your API in different ways with Django. While GraphQL is a safe bet, we’re going to use traditional REST endpoints.
+
+Here is a walkthrough of parts of this tutorial;
+
+ - 1. Structure and setup
+ - 2. Front end
+ - 3. Back end
+ - 4. Running the app
+ - 5. Conclusion
+
+## 1. Structure and setup
+
+Lets build an Online cloth store app that accepts endpoints for products and category.
+
+The code is available on my [github](https://github.com/jeffubayi/Macrina) and here is the [Demo](https://macrina.netlify.app/) app.
+
+Note that we’re literally building two separate apps here.
+
+  - 1. The React client
+  - 2. The Django API server
+
+
+## 2.Front End
+
+The focus of this article is to show you how to consume a Django API quickly from a React app.
+
+Navigate to whatever directory on your machine in which you write code, create the top-level app directory called `Macrina` /or any given directory name.
+
+          mkdir cloth-store
+
+         cd cloth-store
+
+         npx create-react-app client
+
+         cd client
+
+         npm install axios --save
+
+> Axios is the promise-based HTTP client that we’ll use to make HTTP request calls to our Django API.
+
+Now, update the `package.json` that was created. It should look like this:
+```javascript
+{
+  "name": "cloth-store",
+  "version": "1.0.0",
+  "description": "Modularizing",
+  "keywords": [],
+  "main": "src/index.js",
+  "dependencies": {
+    "axios": "^18.5.1",
+    "react": "16.3.2",
+    "react-dom": "16.3.2",
+    "react-jsonschema-form": "1.0.3",
+    "react-redux": "5.0.7",
+    "react-router-dom": "4.3.1",
+    "react-scripts": "1.1.4",
+    "react-spinners": "^0.3.3",
+    "redux": "4.0.0",
+    "superagent": "latest"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
+```
+First of all, In you `src/` folder create another folder called `lib`, and then `cd` and create a file `api.js`.
+
+It’ll keep the url of our API:
+
+```javascript
+
+import superagent from 'superagent';
+
+import * as utils from './utils.js';
+
+let base = 'https://cloth-store-api.herokuapp.com/api/v1';
+
+export const get = async payload => {
+  let url = base + '/' + Object.values(payload).join('/');
+
+  let data = await utils.fetchData(url);
+  return data;
+};
+
+export const put = payload => {
+  let url = `${base}/${payload.model}/${payload.data._id}`;
+  return superagent
+    .put(url)
+    .send(payload.data)
+    .then(result => result.body)
+    .catch(console.error);
+};
+```
+Then, let’s go to the components creation, starting by the `store.js`.
+
+```javascript
+import './store.css';
+
+import React from 'react';
+import * as Spinners from 'react-spinners';
+
+import * as api from '../../lib/api.js';
+import * as utils from '../../lib/utils.js';
+
+import Cart from '../cart/cart.js';
+import Categories from '../categories/categories.js';
+import Modal from '../modal/modal.js';
+import Nav from '../nav/nav.js';
+import Products from '../products/products.js';
+
+export default class Store extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      cart: [],
+      loading: false,
+      showCartModal: false,
+    };
+
+    this.getProducts = this.getProducts.bind(this);
+    this.addToCart = this.addToCart.bind(this);
+    this.removeFromCart = this.removeFromCart.bind(this);
+    this.quatityOnCart = this.quatityOnCart.bind(this);
+    // this.cartTotal = this.cartTotal.bind(this);
+  }
+
+  // componentDidUpdate() {
+  //   console.log('__STATE__', this.state);
+  //   console.log('__CART__', this.state.cart);
+  // }
+
+  async componentWillMount() {
+    this.setState({loading: true});
+    let payload = { model: 'categories' };
+    let categories = await api.get(payload);
+
+    this.setState({ categories, loading: false});
+  }
+
+  async getProducts(e) {
+    this.setState({ loading: true });
+    let payload = { model: 'categories', id: e.target.dataset.id };
+    let category = await api.get(payload);
+    let products = category.products;
+    this.setState({ products, loading: false });
+  }
+
+  addToCart(e) {
+    let productId = e.target.id;
+    let products = this.state.products;
+    let product = null;
+
+    products.forEach(item => {
+      if (item._id === productId) {
+        product = item;
+      }
+    });
+
+    let cart = this.state.cart || [];
+    let add = true;
+
+    cart.forEach(el => {
+      if (el.product._id === productId) {
+        add = false;
+      }
+    });
+
+    if (add) {
+      this.setState({
+        cart: [...this.state.cart, { product: product, quantity: 1 }],
+      });
+    } else {
+      alert('This product is already in your cart');
+    }
+    add = true;
+  }
+
+  removeFromCart(e) {
+    let productId = e.target.dataset.id;
+
+    let cart = this.state.cart.filter(item => item.product._id !== productId);
+    this.setState({ cart });
+  }
+  quatityOnCart(e) {
+    let productId = e.target.dataset.id;
+    let quantity = e.target.value;
+
+    let cart = [...this.state.cart];
+
+    cart.forEach(product => {
+      if (product.product._id === productId) {
+        product.quantity = quantity;
+      }
+    });
+
+    this.setState({ cart: [...cart] });
+  }
+
+  toggleCartModal = e => {
+    let targetEl = e.target.tagName;
+    targetEl === 'SECTION' || targetEl === 'BUTTON'
+      ? this.state.showCartModal ? this.setState({ showCartModal: false }) : this.setState({ showCartModal: true })
+      : null;
+  }
+
+
+
+  render() {
+    let products = this.state.products || [];
+    return (
+      <React.Fragment>
+        {
+          this.state.showCartModal ? <Modal content={this.state.cart} toggleCartModal={this.toggleCartModal} /> : null
+        }
+        <Nav />
+        <section id="store">
+          {
+            utils.renderIf(
+              this.state.loading,
+              <div className='sweet-loading'>
+                <Spinners.BarLoader className="spinner" size={160} color={'#0a0a0a'} />
+              </div>
+            )
+          }
+          <Categories
+            categories={this.state.categories}
+            getProducts={this.getProducts}
+          />
+          {
+            utils.renderIf(
+              products && products.length, 
+              <Products products={products} addtocart={this.addToCart} />
+            )
+          }
+          <Cart
+            cart={this.state.cart}
+            changeQuantity={this.quatityOnCart}
+            removeItem={this.removeFromCart}
+            toggleCartModal={this.toggleCartModal}
+          />
+        </section>
+      </React.Fragment>
+    );
+  }
+}
+```
+
+
+
+
+## 3.Back End
+
+   ```python
+
+     $ py -m venv store
+
+     $ source store/bin/activate
+
+     $ pip install django djangorestframework
+
+     $ django-admin startproject Server
+
+     $ python manage.py makemigrations
+
+     $ python manage.py migrate
+
+     $ python manage.py createsuperuser
+
+     $ python manage.py runserver
+   ```
+
+Now, when you open [http://localhost:8000](http://localhost:8000 "http://localhost:8000"), you should see this:
+
+![](https://res.cloudinary.com/practicaldev/image/fetch/s--j-tGDVVl--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://i.imgur.com/74B13x3.png)
+
+
+## 4.Conclusion
+
+You can access the full source code of this project [here](https://github.com/jeffubayi/Macrina).
+
+Of course, this is only one way of doing this.
+
+The good thing about using React is that you can organize your components (or even create more components out of the ones you have) in many ways to achieve the same goal.
+
+In the world of SPAs, your back-end APIs are practically fully independent from the front-end clients.
+
+This gives you the flexibility to change the whole architecture of your API (like switching from Django to Flask, for example) without any side effects to your React apps.
+
+Thanks for the Read.
