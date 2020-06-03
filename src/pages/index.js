@@ -23,7 +23,7 @@ const IndexPage = ({ data }) => {
 			<WaveSection>
 				<h1 className="intro-title">Hello!</h1>
 				<p>
-					 We are NestedAi ,let's research.
+					 AI Tested. AI Nested.
 				</p>
 				<br />
 				<p>
