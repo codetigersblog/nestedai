@@ -35,9 +35,7 @@ const IndexPage = ({ data }) => {
 						Projects
 					</Link>
 					&nbsp;
-					<Link to="/resume" secondary button>
-						Resume
-					</Link>
+
 				</p>
 			</WaveSection>
 			{edges.length ? (
